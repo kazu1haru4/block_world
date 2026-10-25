@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>ブロックワールド - 試作1</title>
+<style>
+  *{box-sizing:border-box} html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#87ceeb;font-family:system-ui,-apple-system,sans-serif;touch-action:none}
+  #game{position:fixed;inset:0} canvas{display:block}
+  #hud{position:fixed;inset:0;pointer-events:none;color:white;text-shadow:0 2px 3px #000,1px 1px 2px #000}
+  #top{position:absolute;top:12px;left:12px;right:12px;display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
+  .panel{background:#1119;border:1px solid #ffffff55;border-radius:10px;padding:8px 11px;font-size:13px}
+  #hint{max-width:72%;line-height:1.45}
+  #crosshair{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);font-size:24px;font-weight:300}
+  #hotbar{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);display:flex;gap:5px;pointer-events:auto}
+  .slot{width:45px;height:45px;border:2px solid #ffffff99;background:#222b;border-radius:5px;display:grid;place-items:center;font-size:22px;position:relative}
+  .slot.active{border:3px solid #fff;background:#ffffff55;transform:translateY(-4px)}
+  .slot small{position:absolute;right:3px;bottom:0;font-size:10px}
+  #mobile{display:none;pointer-events:auto}
+  #lookArea{position:absolute;right:0;top:15%;width:55%;height:60%;pointer-events:auto}
+  #stick{position:absolute;left:18px;bottom:82px;width:112px;height:112px;border-radius:50%;background:#1115;border:2px solid #ffffff88;pointer-events:auto}
+  #knob{position:absolute;left:34px;top:34px;width:40px;height:40px;border-radius:50%;background:#ffffffaa;border:2px solid white}
+  #actions{position:absolute;right:14px;bottom:80px;display:grid;grid-template-columns:repeat(2,62px);gap:9px}
+  .act{width:62px;height:56px;border:1px solid #ffffffaa;border-radius:13px;background:#222b;color:white;font-size:12px;font-weight:700;touch-action:none}
+  #jump{grid-column:2}
+  #status{position:absolute;top:62px;left:12px;font-size:13px}
+  #start{position:fixed;inset:0;background:#0009;display:flex;align-items:center;justify-content:center;padding:22px;color:white;text-align:center}
+  #startCard{max-width:440px;background:#18212af2;border:1px solid #ffffff55;border-radius:18px;padding:22px;box-shadow:0 12px 45px #0006}
+  #start h1{margin:0 0 8px;font-size:27px} #start p{line-height:1.6;color:#e6edf3}
+  #start button{border:0;border-radius:12px;background:#4caf50;color:white;font-weight:800;font-size:17px;padding:13px 22px}
+  #reset{pointer-events:auto;border:0;background:#222b;color:white;border-radius:8px;padding:7px 9px}
+  @media (pointer:coarse){#mobile{display:block}#hint{max-width:72%}.slot{width:38px;height:38px;font-size:18px}#hotbar{bottom:8px;gap:3px}}
+</style>
+</head>
+<body>
+<div id="game"></div>
+<div id="hud">
+  <div id="top">
+    <div id="hint" class="panel">ブロックワールド 試作1<br>照準をブロックに合わせて採掘・設置</div>
+    <button id="reset">ワールド再生成</button>
+  </div>
+  <div id="status" class="panel">読み込み中…</div>
+  <div id="crosshair">+</div>
+  <div id="hotbar">
+    <div class="slot active" data-type="grass" title="草ブロック">🟩<small>1</small></div>
+    <div class="slot" data-type="dirt" title="土ブロック">🟫<small>2</small></div>
+    <div class="slot" data-type="stone" title="石ブロック">⬜<small>3</small></div>
+    <div class="slot" data-type="wood" title="木材">🪵<small>4</small></div>
+  </div>
+  <div id="mobile">
+    <div id="lookArea"></div>
+    <div id="stick"><div id="knob"></div></div>
+    <div id="actions">
+      <button class="act" id="break">採掘</button>
+      <button class="act" id="jump">ジャンプ</button>
+      <button class="act" id="place">設置</button>
+      <button class="act" id="mode">操作説明</button>
+    </div>
+  </div>
+</div>
+<div id="start">
+ <div id="startCard">
+  <h1>⛏️ ブロックワールド</h1>
+  <p>自動生成された小さな3D世界を歩き回って、ブロックを壊したり置いたりできる試作版です。</p>
+  <p><b>PC：</b> WASDで移動・マウスで視点・左クリックで採掘・右クリックで設置・Spaceでジャンプ。<br><b>スマホ：</b>左スティックで移動、右側をドラッグして視点変更、ボタンで操作。</p>
+  <button id="play">ワールドに入る</button>
+ </div>
+</div>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.164.1/build/three.module.js';
+
+const root=document.querySelector('#game');
+const scene=new THREE.Scene(); scene.background=new THREE.Color(0x87ceeb); scene.fog=new THREE.Fog(0x87ceeb,18,48);
+const camera=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,.1,100);
+const renderer=new THREE.WebGLRenderer({antialias:false}); renderer.setPixelRatio(Math.min(devicePixelRatio,1.7)); renderer.setSize(innerWidth,innerHeight); renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap; root.appendChild(renderer.domElement);
+scene.add(new THREE.HemisphereLight(0xdff3ff,0x63734a,2.0));
+const sun=new THREE.DirectionalLight(0xfff4d6,2.0); sun.position.set(10,22,8); sun.castShadow=true; scene.add(sun);
+const mats={
+ grass:new THREE.MeshLambertMaterial({color:0x65a844}),
+ dirt:new THREE.MeshLambertMaterial({color:0x8a5a35}),
+ stone:new THREE.MeshLambertMaterial({color:0x888d92}),
+ wood:new THREE.MeshLambertMaterial({color:0x98652f}),
+ leaves:new THREE.MeshLambertMaterial({color:0x347a38}),
+ sand:new THREE.MeshLambertMaterial({color:0xd7c17c})
+};
+const geo=new THREE.BoxGeometry(1,1,1), blocks=new Map(), blockMeshes=[];
+const key=(x,y,z)=>`${x},${y},${z}`;
+function hash(x,z){let n=Math.sin(x*127.1+z*311.7)*43758.5453;return n-Math.floor(n)}
+function heightAt(x,z){return Math.floor(2+Math.sin(x*.32)*1.1+Math.cos(z*.27)*.9+(hash(Math.floor(x/3),Math.floor(z/3))-.5)*1.5)}
+function addBlock(x,y,z,type,replace=false){
+ const k=key(x,y,z); if(blocks.has(k)){if(!replace)return;scene.remove(blocks.get(k).mesh);blocks.delete(k)}
+ const mesh=new THREE.Mesh(geo,mats[type]||mats.grass);mesh.position.set(x,y,z);mesh.castShadow=true;mesh.receiveShadow=true;
+ mesh.userData={x,y,z,type};scene.add(mesh);blocks.set(k,{mesh,type});blockMeshes.push(mesh);return mesh;
+}
+function removeBlock(x,y,z){const k=key(x,y,z),b=blocks.get(k);if(!b)return;scene.remove(b.mesh);blocks.delete(k);const i=blockMeshes.indexOf(b.mesh);if(i>=0)blockMeshes.splice(i,1)}
+function clearWorld(){for(const b of blocks.values())scene.remove(b.mesh);blocks.clear();blockMeshes.length=0;for(const o of [...scene.children])if(o.userData.tree)scene.remove(o)}
+function makeTree(x,y,z){
+ const trunk=new THREE.Mesh(geo,mats.wood);trunk.scale.set(.72,3,.72);trunk.position.set(x,y+1.5,z);trunk.castShadow=true;trunk.userData.tree=true;scene.add(trunk);
+ for(let dy=2;dy<=4;dy++)for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++){if(Math.abs(dx)+Math.abs(dz)+(dy===4?1:0)<=3){let leaf=new THREE.Mesh(geo,mats.leaves);leaf.position.set(x+dx,y+dy,z+dz);leaf.userData.tree=true;scene.add(leaf)}}
+}
+function generate(){
+ clearWorld();
+ for(let x=-15;x<=15;x++)for(let z=-15;z<=15;z++){
+  const h=heightAt(x,z);
+  for(let y=-2;y<=h;y++)addBlock(x,y,z,y===h?(h<=1?'sand':'grass'):(y<h-2?'stone':'dirt'));
+  if(hash(x*4,z*4)>.986&&Math.abs(x)>3&&Math.abs(z)>3)makeTree(x,h+1,z);
+ }
+}
+generate();
+const player={x:0,y:5,z:7,vy:0,onGround:false}; camera.position.set(player.x,player.y,player.z);
+let yaw=0,pitch=0,selected='grass',started=false,locked=false;
+const keys={};let joy={x:0,y:0},lookTouch=null,prevLook=null;
+const raycaster=new THREE.Raycaster();raycaster.far=6;
+function updateCamera(){camera.rotation.order='YXZ';camera.rotation.y=yaw;camera.rotation.x=pitch}
+function targetBlock(){raycaster.setFromCamera(new THREE.Vector2(0,0),camera);const hits=raycaster.intersectObjects(blockMeshes,false);return hits[0]||null}
+function mine(){const hit=targetBlock();if(hit){const p=hit.object.position;removeBlock(Math.round(p.x),Math.round(p.y),Math.round(p.z));updateStatus()}}
+function place(){const hit=targetBlock();if(!hit)return;const n=hit.face.normal;const p=hit.object.position;const x=Math.round(p.x+n.x),y=Math.round(p.y+n.y),z=Math.round(p.z+n.z);if(Math.abs(x-player.x)<.8&&Math.abs(z-player.z)<.8&&Math.abs(y-(player.y-1))<1.8)return;addBlock(x,y,z,selected);updateStatus()}
+function updateStatus(){document.querySelector('#status').textContent=`ブロック ${blocks.size}個 ｜ 選択：${({grass:'草',dirt:'土',stone:'石',wood:'木材'})[selected]} ｜ 位置：${Math.round(player.x)}, ${Math.round(player.z)}`}
+document.querySelectorAll('.slot').forEach(s=>s.addEventListener('click',()=>{document.querySelectorAll('.slot').forEach(x=>x.classList.remove('active'));s.classList.add('active');selected=s.dataset.type;updateStatus()}));
+document.querySelector('#reset').addEventListener('click',()=>{generate();player.x=0;player.z=7;player.y=6;player.vy=0;updateStatus()});
+document.querySelector('#play').addEventListener('click',()=>{started=true;document.querySelector('#start').style.display='none';if(matchMedia('(pointer:fine)').matches)renderer.domElement.requestPointerLock?.();});
+document.addEventListener('pointerlockchange',()=>locked=document.pointerLockElement===renderer.domElement);
+document.addEventListener('mousemove',e=>{if(locked&&started){yaw-=e.movementX*.0025;pitch-=e.movementY*.0025;pitch=Math.max(-1.5,Math.min(1.5,pitch));updateCamera()}});
+renderer.domElement.addEventListener('contextmenu',e=>e.preventDefault());
+renderer.domElement.addEventListener('mousedown',e=>{if(!started)return;if(e.button===0)mine();if(e.button===2)place()});
+document.addEventListener('keydown',e=>{keys[e.code]=true;if(['Space','ArrowUp','ArrowDown'].includes(e.code))e.preventDefault();if(e.code==='Space'&&player.onGround)player.vy=7;if(e.code.startsWith('Digit')){const s=document.querySelector(`.slot[data-type="${({Digit1:'grass',Digit2:'dirt',Digit3:'stone',Digit4:'wood'})[e.code]}"]`);s?.click()}});
+document.addEventListener('keyup',e=>keys[e.code]=false);
+const stick=document.querySelector('#stick'),knob=document.querySelector('#knob');
+stick.addEventListener('pointerdown',e=>{stick.setPointerCapture(e.pointerId);moveJoy(e)});
+stick.addEventListener('pointermove',e=>{if(e.buttons)moveJoy(e)});
+function moveJoy(e){const r=stick.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2;let dx=e.clientX-cx,dy=e.clientY-cy;const len=Math.hypot(dx,dy),max=36;if(len>max){dx=dx/len*max;dy=dy/len*max}joy={x:dx/max,y:dy/max};knob.style.transform=`translate(${dx}px,${dy}px)`}
+function resetJoy(){joy={x:0,y:0};knob.style.transform='translate(0,0)'}
+stick.addEventListener('pointerup',resetJoy);stick.addEventListener('pointercancel',resetJoy);
+const lookArea=document.querySelector('#lookArea');
+lookArea.addEventListener('pointerdown',e=>{lookTouch=e.pointerId;prevLook={x:e.clientX,y:e.clientY};lookArea.setPointerCapture(e.pointerId)});
+lookArea.addEventListener('pointermove',e=>{if(lookTouch!==e.pointerId||!prevLook)return;const dx=e.clientX-prevLook.x,dy=e.clientY-prevLook.y;prevLook={x:e.clientX,y:e.clientY};yaw-=dx*.006;pitch=Math.max(-1.45,Math.min(1.45,pitch-dy*.006));updateCamera()});
+function endLook(e){if(lookTouch===e.pointerId){lookTouch=null;prevLook=null}}lookArea.addEventListener('pointerup',endLook);lookArea.addEventListener('pointercancel',endLook);
+document.querySelector('#break').addEventListener('pointerdown',e=>{e.preventDefault();mine()});
+document.querySelector('#place').addEventListener('pointerdown',e=>{e.preventDefault();place()});
+document.querySelector('#jump').addEventListener('pointerdown',e=>{e.preventDefault();if(player.onGround)player.vy=7});
+document.querySelector('#mode').addEventListener('click',()=>alert('左スティック：移動／右側ドラッグ：視点／採掘：ブロックを壊す／設置：ブロックを置く'));
+let last=performance.now();
+function loop(now){requestAnimationFrame(loop);const dt=Math.min((now-last)/1000,.04);last=now;
+ if(started){
+  const forward=(keys.KeyW||keys.ArrowUp?1:0)-(keys.KeyS||keys.ArrowDown?1:0)-joy.y;
+  const side=(keys.KeyD||keys.ArrowRight?1:0)-(keys.KeyA||keys.ArrowLeft?1:0)+joy.x;
+  const speed=5,dx=(Math.sin(yaw)*forward+Math.cos(yaw)*side)*speed*dt,dz=(Math.cos(yaw)*forward-Math.sin(yaw)*side)*speed*dt;
+  player.x+=dx;player.z+=dz;
+  player.vy-=18*dt;player.y+=player.vy*dt;
+  const ground=heightAt(Math.round(player.x),Math.round(player.z))+2.35;
+  if(player.y<ground){player.y=ground;player.vy=0;player.onGround=true}else player.onGround=false;
+  player.x=Math.max(-15,Math.min(15,player.x));player.z=Math.max(-15,Math.min(15,player.z));
+  camera.position.set(player.x,player.y,player.z);updateCamera();
+ }
+ renderer.render(scene,camera);
+}
+requestAnimationFrame(loop);updateStatus();
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+</script>
+</body>
+</html>
