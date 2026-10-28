@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
-<title>ブロックワールド - 試作1</title>
+<title>ブロックワールド - 試作2</title>
 <style>
   *{box-sizing:border-box} html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#87ceeb;font-family:system-ui,-apple-system,sans-serif;touch-action:none}
   #game{position:fixed;inset:0} canvas{display:block}
@@ -30,13 +30,36 @@
   #start button{border:0;border-radius:12px;background:#4caf50;color:white;font-weight:800;font-size:17px;padding:13px 22px}
   #reset{pointer-events:auto;border:0;background:#222b;color:white;border-radius:8px;padding:7px 9px}
   @media (pointer:coarse){#mobile{display:block}#hint{max-width:72%}.slot{width:38px;height:38px;font-size:18px}#hotbar{bottom:8px;gap:3px}}
+ 
+  #start{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:20px;color:white;text-align:center;background:linear-gradient(180deg,#70c9f5 0%,#b9e7f9 48%,#6dba4e 48%,#397c36 100%);overflow:hidden}
+  #start:before{content:"";position:absolute;inset:0;background:linear-gradient(135deg,#ffffff20,transparent 45%,#173f2525);pointer-events:none}
+  #titleMenu{position:relative;width:min(100%,460px);padding:28px 24px 20px;border:3px solid #ffffffd9;border-radius:22px;background:#172b35e8;box-shadow:0 12px 0 #10202999,0 24px 55px #10202955;backdrop-filter:blur(5px)}
+  .titleSky{position:absolute;top:12px;left:0;right:0;display:flex;justify-content:space-around;opacity:.7;font-size:25px;pointer-events:none}
+  .logoMark{font-size:32px;letter-spacing:2px;margin-top:20px;filter:drop-shadow(0 4px 0 #0005)}
+  .gameTitle{font-weight:1000;font-size:clamp(30px,8vw,44px);letter-spacing:1px;color:#fff;text-shadow:0 4px 0 #3c693b,0 7px 0 #1b3a2a;margin:10px 0 4px}
+  .subtitle{font-size:10px;letter-spacing:4px;color:#bce8c0;margin-bottom:25px}
+  .menuButtons{display:grid;gap:12px}
+  .menuButtons button,.modalCard button{width:100%;min-height:52px;border-radius:13px;font-weight:900;font-size:17px;cursor:pointer;touch-action:manipulation}
+  .menuPrimary{border:2px solid #d5f5bd;background:linear-gradient(#8fe35d,#4aaf39);color:#153a20;box-shadow:0 5px 0 #28662c}
+  .menuButton{border:2px solid #ffffff66;background:#ffffff12;color:white}
+  .menuButtons button:active,.modalCard button:active{transform:translateY(3px);box-shadow:none}
+  .menuFooter{margin-top:22px;font-size:11px;color:#c9d8dc}
+  .modal{position:fixed;inset:0;z-index:30;display:grid;place-items:center;padding:20px;background:#07131ddd;color:white}
+  .modal.hidden{display:none}
+  .modalCard{width:min(100%,400px);padding:24px;border-radius:18px;background:#1b3039;border:2px solid #ffffff55;box-shadow:0 15px 40px #0007}
+  .modalCard h2{margin:0 0 22px}
+  .modalCard label{display:flex;justify-content:space-between;gap:10px;margin:18px 0 8px}
+  .modalCard input[type=range]{width:100%;accent-color:#7cdb50}
+  .modalCard .checkLabel{justify-content:flex-start;align-items:center}
+  .modalCard input[type=checkbox]{width:20px;height:20px;accent-color:#69c947}
+  .modalCard button{margin-top:18px}
 </style>
 </head>
 <body>
 <div id="game"></div>
 <div id="hud">
   <div id="top">
-    <div id="hint" class="panel">ブロックワールド 試作1<br>照準をブロックに合わせて採掘・設置</div>
+    <div id="hint" class="panel">ブロックワールド 試作2：広大な世界<br>照準をブロックに合わせて採掘・設置</div>
     <button id="reset">ワールド再生成</button>
   </div>
   <div id="status" class="panel">読み込み中…</div>
@@ -59,11 +82,26 @@
   </div>
 </div>
 <div id="start">
- <div id="startCard">
-  <h1>⛏️ ブロックワールド</h1>
-  <p>自動生成された小さな3D世界を歩き回って、ブロックを壊したり置いたりできる試作版です。</p>
-  <p><b>PC：</b> WASDで移動・マウスで視点・左クリックで採掘・右クリックで設置・Spaceでジャンプ。<br><b>スマホ：</b>左スティックで移動、右側をドラッグして視点変更、ボタンで操作。</p>
-  <button id="play">ワールドに入る</button>
+ <div id="titleMenu">
+  <div class="titleSky"><span>☁️</span><span>☁️</span></div>
+  <div class="logoMark">🟩 🟫 🟩</div>
+  <div class="gameTitle">ブロックワールド</div>
+  <div class="subtitle">CREATE YOUR OWN WORLD</div>
+  <div class="menuButtons">
+   <button id="play" class="menuPrimary">▶ プレイ</button>
+   <button id="createWorld" class="menuButton">🌍 ワールドを作る</button>
+   <button id="settingsOpen" class="menuButton">⚙️ 設定</button>
+  </div>
+  <div class="menuFooter">試作版 • あなただけの世界を作ろう</div>
+ </div>
+</div>
+<div id="settingsPanel" class="modal hidden">
+ <div class="modalCard">
+  <h2>⚙️ 設定</h2>
+  <label for="lookSensitivity">視点感度 <span id="sensLabel">標準</span></label>
+  <input id="lookSensitivity" type="range" min="3" max="12" value="6">
+  <label class="checkLabel"><input id="showHints" type="checkbox" checked> 操作ヒントを表示</label>
+  <button id="settingsClose" class="menuPrimary">戻る</button>
  </div>
 </div>
 <script type="module">
@@ -98,27 +136,41 @@ function makeTree(x,y,z){
  const trunk=new THREE.Mesh(geo,mats.wood);trunk.scale.set(.72,3,.72);trunk.position.set(x,y+1.5,z);trunk.castShadow=true;trunk.userData.tree=true;scene.add(trunk);
  for(let dy=2;dy<=4;dy++)for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++){if(Math.abs(dx)+Math.abs(dz)+(dy===4?1:0)<=3){let leaf=new THREE.Mesh(geo,mats.leaves);leaf.position.set(x+dx,y+dy,z+dz);leaf.userData.tree=true;scene.add(leaf)}}
 }
-function generate(){
- clearWorld();
- for(let x=-15;x<=15;x++)for(let z=-15;z<=15;z++){
-  const h=heightAt(x,z);
-  for(let y=-2;y<=h;y++)addBlock(x,y,z,y===h?(h<=1?'sand':'grass'):(y<h-2?'stone':'dirt'));
+const CHUNK_SIZE=16, generatedChunks=new Set(), savedEdits=new Map();
+function saveWorld(){try{localStorage.setItem('blockWorldSaveV1',JSON.stringify({edits:[...savedEdits.entries()],player:{x:player.x,y:player.y,z:player.z}}))}catch(e){}}
+function loadSavedWorld(){try{const d=JSON.parse(localStorage.getItem('blockWorldSaveV1')||'null');if(d&&Array.isArray(d.edits))for(const [k,v] of d.edits)savedEdits.set(k,v);return d?.player||null}catch(e){return null}}
+function generateChunk(cx,cz){
+ const ck=cx+','+cz;if(generatedChunks.has(ck))return;generatedChunks.add(ck);
+ for(let x=cx*CHUNK_SIZE;x<(cx+1)*CHUNK_SIZE;x++)for(let z=cz*CHUNK_SIZE;z<(cz+1)*CHUNK_SIZE;z++){
+  const h=heightAt(x,z);for(let y=-2;y<=h;y++)addBlock(x,y,z,y===h?(h<=1?'sand':'grass'):(y<h-2?'stone':'dirt'));
   if(hash(x*4,z*4)>.986&&Math.abs(x)>3&&Math.abs(z)>3)makeTree(x,h+1,z);
  }
+ for(const [k,type] of savedEdits){const [x,y,z]=k.split(',').map(Number);if(Math.floor(x/CHUNK_SIZE)===cx&&Math.floor(z/CHUNK_SIZE)===cz){if(type===null)removeBlock(x,y,z);else addBlock(x,y,z,type,true)}}
 }
-generate();
-const player={x:0,y:5,z:7,vy:0,onGround:false}; camera.position.set(player.x,player.y,player.z);
+function ensureChunks(){const cx=Math.floor(player.x/CHUNK_SIZE),cz=Math.floor(player.z/CHUNK_SIZE);for(let x=cx-1;x<=cx+1;x++)for(let z=cz-1;z<=cz+1;z++)generateChunk(x,z)}
+function generate(){clearWorld();generatedChunks.clear();for(let x=-1;x<=1;x++)for(let z=-1;z<=1;z++)generateChunk(x,z)}
+const savedPlayer=loadSavedWorld();
+const player={x:savedPlayer?.x??0,y:savedPlayer?.y??5,z:savedPlayer?.z??7,vy:0,onGround:false};
+generate();ensureChunks();camera.position.set(player.x,player.y,player.z);
 let yaw=0,pitch=0,selected='grass',started=false,locked=false;
 const keys={};let joy={x:0,y:0},lookTouch=null,prevLook=null;
 const raycaster=new THREE.Raycaster();raycaster.far=6;
 function updateCamera(){camera.rotation.order='YXZ';camera.rotation.y=yaw;camera.rotation.x=pitch}
 function targetBlock(){raycaster.setFromCamera(new THREE.Vector2(0,0),camera);const hits=raycaster.intersectObjects(blockMeshes,false);return hits[0]||null}
-function mine(){const hit=targetBlock();if(hit){const p=hit.object.position;removeBlock(Math.round(p.x),Math.round(p.y),Math.round(p.z));updateStatus()}}
-function place(){const hit=targetBlock();if(!hit)return;const n=hit.face.normal;const p=hit.object.position;const x=Math.round(p.x+n.x),y=Math.round(p.y+n.y),z=Math.round(p.z+n.z);if(Math.abs(x-player.x)<.8&&Math.abs(z-player.z)<.8&&Math.abs(y-(player.y-1))<1.8)return;addBlock(x,y,z,selected);updateStatus()}
+function mine(){const hit=targetBlock();if(hit){const p=hit.object.position,x=Math.round(p.x),y=Math.round(p.y),z=Math.round(p.z);savedEdits.set(key(x,y,z),null);removeBlock(x,y,z);saveWorld();updateStatus()}}
+function place(){const hit=targetBlock();if(!hit)return;const n=hit.face.normal;const p=hit.object.position;const x=Math.round(p.x+n.x),y=Math.round(p.y+n.y),z=Math.round(p.z+n.z);if(Math.abs(x-player.x)<.8&&Math.abs(z-player.z)<.8&&Math.abs(y-(player.y-1))<1.8)return;addBlock(x,y,z,selected);savedEdits.set(key(x,y,z),selected);saveWorld();updateStatus()}
 function updateStatus(){document.querySelector('#status').textContent=`ブロック ${blocks.size}個 ｜ 選択：${({grass:'草',dirt:'土',stone:'石',wood:'木材'})[selected]} ｜ 位置：${Math.round(player.x)}, ${Math.round(player.z)}`}
 document.querySelectorAll('.slot').forEach(s=>s.addEventListener('click',()=>{document.querySelectorAll('.slot').forEach(x=>x.classList.remove('active'));s.classList.add('active');selected=s.dataset.type;updateStatus()}));
-document.querySelector('#reset').addEventListener('click',()=>{generate();player.x=0;player.z=7;player.y=6;player.vy=0;updateStatus()});
-document.querySelector('#play').addEventListener('click',()=>{started=true;document.querySelector('#start').style.display='none';if(matchMedia('(pointer:fine)').matches)renderer.domElement.requestPointerLock?.();});
+document.querySelector('#reset').addEventListener('click',()=>{savedEdits.clear();try{localStorage.removeItem('blockWorldSaveV1')}catch(e){}generate();player.x=0;player.z=7;player.y=6;player.vy=0;ensureChunks();updateStatus()});
+function enterWorld(){started=true;document.querySelector('#start').style.display='none';document.querySelector('#settingsPanel').classList.add('hidden');if(matchMedia('(pointer:fine)').matches)renderer.domElement.requestPointerLock?.();}
+document.querySelector('#play').addEventListener('click',enterWorld);
+document.querySelector('#createWorld').addEventListener('click',()=>{if(confirm('新しいワールドを作りますか？今のブラウザ内セーブは消えます。')){savedEdits.clear();try{localStorage.removeItem('blockWorldSaveV1')}catch(e){}player.x=0;player.y=6;player.z=7;player.vy=0;generate();ensureChunks();saveWorld();enterWorld();}});
+document.querySelector('#settingsOpen').addEventListener('click',()=>document.querySelector('#settingsPanel').classList.remove('hidden'));
+document.querySelector('#settingsClose').addEventListener('click',()=>document.querySelector('#settingsPanel').classList.add('hidden'));
+document.querySelector('#lookSensitivity').addEventListener('input',e=>{const v=Number(e.target.value);window.lookSensitivity=v/1000;document.querySelector('#sensLabel').textContent=v<5?'低い':v<9?'標準':'高い';});
+window.lookSensitivity=.006;
+document.querySelector('#showHints').addEventListener('change',e=>{document.querySelector('#hint').style.display=e.target.checked?'':'none';});
+
 document.addEventListener('pointerlockchange',()=>locked=document.pointerLockElement===renderer.domElement);
 document.addEventListener('mousemove',e=>{if(locked&&started){yaw-=e.movementX*.0025;pitch-=e.movementY*.0025;pitch=Math.max(-1.5,Math.min(1.5,pitch));updateCamera()}});
 renderer.domElement.addEventListener('contextmenu',e=>e.preventDefault());
@@ -133,7 +185,7 @@ function resetJoy(){joy={x:0,y:0};knob.style.transform='translate(0,0)'}
 stick.addEventListener('pointerup',resetJoy);stick.addEventListener('pointercancel',resetJoy);
 const lookArea=document.querySelector('#lookArea');
 lookArea.addEventListener('pointerdown',e=>{lookTouch=e.pointerId;prevLook={x:e.clientX,y:e.clientY};lookArea.setPointerCapture(e.pointerId)});
-lookArea.addEventListener('pointermove',e=>{if(lookTouch!==e.pointerId||!prevLook)return;const dx=e.clientX-prevLook.x,dy=e.clientY-prevLook.y;prevLook={x:e.clientX,y:e.clientY};yaw-=dx*.006;pitch=Math.max(-1.45,Math.min(1.45,pitch-dy*.006));updateCamera()});
+lookArea.addEventListener('pointermove',e=>{if(lookTouch!==e.pointerId||!prevLook)return;const dx=e.clientX-prevLook.x,dy=e.clientY-prevLook.y;prevLook={x:e.clientX,y:e.clientY};yaw-=dx*(window.lookSensitivity||.006);pitch=Math.max(-1.45,Math.min(1.45,pitch-dy*(window.lookSensitivity||.006)));updateCamera()});
 function endLook(e){if(lookTouch===e.pointerId){lookTouch=null;prevLook=null}}lookArea.addEventListener('pointerup',endLook);lookArea.addEventListener('pointercancel',endLook);
 document.querySelector('#break').addEventListener('pointerdown',e=>{e.preventDefault();mine()});
 document.querySelector('#place').addEventListener('pointerdown',e=>{e.preventDefault();place()});
@@ -149,8 +201,8 @@ function loop(now){requestAnimationFrame(loop);const dt=Math.min((now-last)/1000
   player.vy-=18*dt;player.y+=player.vy*dt;
   const ground=heightAt(Math.round(player.x),Math.round(player.z))+2.35;
   if(player.y<ground){player.y=ground;player.vy=0;player.onGround=true}else player.onGround=false;
-  player.x=Math.max(-15,Math.min(15,player.x));player.z=Math.max(-15,Math.min(15,player.z));
-  camera.position.set(player.x,player.y,player.z);updateCamera();
+  ensureChunks();
+  camera.position.set(player.x,player.y,player.z);updateCamera();if(Math.floor(now/3000)!==Math.floor((now-dt*1000)/3000))saveWorld();
  }
  renderer.render(scene,camera);
 }
